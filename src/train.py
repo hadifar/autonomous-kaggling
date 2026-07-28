@@ -19,7 +19,7 @@ def build_model() -> XGBClassifier:
     """Single source of truth for the model configuration used by every CV
     fold."""
     return XGBClassifier(
-        max_depth=6,
+        max_depth=10,
         learning_rate=0.09755452581197879,
         subsample=0.7917074280055386,
         colsample_bytree=0.7302102879528256,
