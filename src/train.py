@@ -51,8 +51,7 @@ def main() -> None:
         model = build_model()
         weights = compute_sample_weight("balanced", y.iloc[train_idx])
         model.fit(x.iloc[train_idx], y.iloc[train_idx], sample_weight=weights)
-        # CatBoost returns an (n, 1) column vector rather than sklearn's 1-D array.
-        predictions = model.predict(x.iloc[val_idx]).ravel()
+        predictions = model.predict(x.iloc[val_idx])
         oof.iloc[val_idx] = predictions
 
         fold_score = balanced_accuracy_score(y.iloc[val_idx], predictions)
