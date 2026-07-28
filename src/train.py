@@ -1,8 +1,14 @@
-"""XGBoost with default hyperparameters."""
+"""XGBoost with balanced class weights.
+
+Balanced accuracy weights each class equally, but 86% of the training rows are
+`at-risk`. Inverse-frequency sample weights align the training objective with
+the metric.
+"""
 
 import pandas as pd
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import StratifiedKFold
+from sklearn.utils.class_weight import compute_sample_weight
 from xgboost import XGBClassifier
 
 from config import settings
@@ -33,7 +39,8 @@ def main() -> None:
 
     for fold, (train_idx, val_idx) in enumerate(folds.split(x, y), start=1):
         model = build_model()
-        model.fit(x.iloc[train_idx], y.iloc[train_idx])
+        weights = compute_sample_weight("balanced", y.iloc[train_idx])
+        model.fit(x.iloc[train_idx], y.iloc[train_idx], sample_weight=weights)
         predictions = model.predict(x.iloc[val_idx])
         oof.iloc[val_idx] = predictions
 
