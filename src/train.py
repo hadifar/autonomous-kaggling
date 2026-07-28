@@ -1,12 +1,8 @@
-"""XGBoost with balanced class weights, averaged over seeds.
+"""XGBoost with balanced class weights.
 
 Balanced accuracy weights each class equally, but 86% of the training rows are
 `at-risk`. Inverse-frequency sample weights align the training objective with
 the metric.
-
-Errors concentrate on genuinely ambiguous rows near the decision boundary, so
-averaging probabilities across seeds (subsample/colsample draws differ) cuts
-variance where it decides the label.
 """
 
 import pandas as pd
@@ -18,10 +14,8 @@ from xgboost import XGBClassifier
 from config import settings
 from data import CLASSES, as_categorical, load_train
 
-SEEDS = [0, 1, 2]
 
-
-def build_model(seed: int) -> XGBClassifier:
+def build_model() -> XGBClassifier:
     """Single source of truth for the model configuration used by every CV
     fold."""
     return XGBClassifier(
@@ -37,7 +31,7 @@ def build_model(seed: int) -> XGBClassifier:
         n_estimators=153,
         enable_categorical=True,
         tree_method="hist",
-        random_state=settings.seed + seed,
+        random_state=settings.seed,
         n_jobs=-1,
     )
 
@@ -54,18 +48,10 @@ def main() -> None:
     )
 
     for fold, (train_idx, val_idx) in enumerate(folds.split(x, y), start=1):
+        model = build_model()
         weights = compute_sample_weight("balanced", y.iloc[train_idx])
-        probabilities = None
-        for seed in SEEDS:
-            model = build_model(seed)
-            model.fit(x.iloc[train_idx], y.iloc[train_idx], sample_weight=weights)
-            seed_probabilities = model.predict_proba(x.iloc[val_idx])
-            probabilities = (
-                seed_probabilities
-                if probabilities is None
-                else probabilities + seed_probabilities
-            )
-        predictions = probabilities.argmax(axis=1)
+        model.fit(x.iloc[train_idx], y.iloc[train_idx], sample_weight=weights)
+        predictions = model.predict(x.iloc[val_idx])
         oof.iloc[val_idx] = predictions
 
         fold_score = balanced_accuracy_score(y.iloc[val_idx], predictions)
