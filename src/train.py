@@ -1,4 +1,4 @@
-"""LightGBM with balanced class weights.
+"""XGBoost with balanced class weights.
 
 Balanced accuracy weights each class equally, but 86% of the training rows are
 `at-risk`. Inverse-frequency sample weights align the training objective with
@@ -6,28 +6,33 @@ the metric.
 """
 
 import pandas as pd
-from lightgbm import LGBMClassifier
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.utils.class_weight import compute_sample_weight
+from xgboost import XGBClassifier
 
 from config import settings
 from data import CLASSES, as_categorical, load_train
 
 
-def build_model() -> LGBMClassifier:
+def build_model() -> XGBClassifier:
     """Single source of truth for the model configuration used by every CV
     fold."""
-    return LGBMClassifier(
-        n_estimators=400,
-        learning_rate=0.05,
-        num_leaves=63,
-        subsample=0.8,
-        subsample_freq=1,
-        colsample_bytree=0.8,
+    return XGBClassifier(
+        max_depth=6,
+        learning_rate=0.09755452581197879,
+        subsample=0.7917074280055386,
+        colsample_bytree=0.7302102879528256,
+        min_child_weight=19,
+        reg_lambda=0.047675439361864844,
+        reg_alpha=0.0020126791514167887,
+        gamma=0.0036943104482137935,
+        max_bin=1024,
+        n_estimators=153,
+        enable_categorical=True,
+        tree_method="hist",
         random_state=settings.seed,
         n_jobs=-1,
-        verbose=-1,
     )
 
 
