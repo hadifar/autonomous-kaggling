@@ -36,9 +36,28 @@ def build_model() -> XGBClassifier:
     )
 
 
+def add_features(x: pd.DataFrame) -> pd.DataFrame:
+    """Ratio and interaction terms over the strongest separators.
+
+    `sleep_duration`, `step_count`, `bmi` and `exercise_duration` carry most of
+    the class separation; trees split on axis-aligned thresholds, so ratios
+    between them have to be supplied explicitly.
+    """
+    x = x.copy()
+    x["sleep_x_steps"] = x["sleep_duration"] * x["step_count"]
+    x["steps_per_bmi"] = x["step_count"] / x["bmi"]
+    x["sleep_per_bmi"] = x["sleep_duration"] / x["bmi"]
+    x["calories_per_step"] = x["calorie_expenditure"] / x["step_count"]
+    x["steps_per_exercise"] = x["step_count"] / x["exercise_duration"]
+    x["calories_per_exercise"] = x["calorie_expenditure"] / x["exercise_duration"]
+    x["activity_index"] = x["step_count"] * x["exercise_duration"]
+    x["sleep_x_exercise"] = x["sleep_duration"] * x["exercise_duration"]
+    return x
+
+
 def main() -> None:
     data = load_train()
-    x, y = as_categorical(data["x"]), data["y"]
+    x, y = as_categorical(add_features(data["x"])), data["y"]
 
     print(f"{len(x):,} rows, {x.shape[1]} features, {len(CLASSES)} classes")
 
