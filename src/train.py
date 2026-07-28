@@ -1,44 +1,44 @@
-"""CatBoost with balanced class weights.
+"""XGBoost with balanced class weights.
 
 Balanced accuracy weights each class equally, but 86% of the training rows are
 `at-risk`. Inverse-frequency sample weights align the training objective with
 the metric.
-
-CatBoost's ordered boosting and target-statistic categorical handling make a
-genuinely different fit than the XGBoost/LightGBM histogram split search.
 """
 
 import pandas as pd
-from catboost import CatBoostClassifier
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.utils.class_weight import compute_sample_weight
+from xgboost import XGBClassifier
 
 from config import settings
-from data import CATEGORICAL, CLASSES, load_train
+from data import CLASSES, as_categorical, load_train
 
 
-def build_model() -> CatBoostClassifier:
+def build_model() -> XGBClassifier:
     """Single source of truth for the model configuration used by every CV
     fold."""
-    return CatBoostClassifier(
-        iterations=600,
-        learning_rate=0.1,
-        depth=8,
-        l2_leaf_reg=3.0,
-        loss_function="MultiClass",
-        cat_features=CATEGORICAL,
-        random_seed=settings.seed,
-        thread_count=-1,
-        verbose=0,
+    return XGBClassifier(
+        max_depth=6,
+        learning_rate=0.09755452581197879,
+        subsample=0.7917074280055386,
+        colsample_bytree=0.7302102879528256,
+        min_child_weight=19,
+        reg_lambda=0.047675439361864844,
+        reg_alpha=0.0020126791514167887,
+        gamma=0.0036943104482137935,
+        max_bin=1024,
+        n_estimators=153,
+        enable_categorical=True,
+        tree_method="hist",
+        random_state=settings.seed,
+        n_jobs=-1,
     )
 
 
 def main() -> None:
     data = load_train()
-    x, y = data["x"].copy(), data["y"]
-    # CatBoost needs categorical columns as strings with no NaN.
-    x[CATEGORICAL] = x[CATEGORICAL].fillna("missing").astype(str)
+    x, y = as_categorical(data["x"]), data["y"]
 
     print(f"{len(x):,} rows, {x.shape[1]} features, {len(CLASSES)} classes")
 
