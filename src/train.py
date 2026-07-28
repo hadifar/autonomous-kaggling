@@ -1,8 +1,13 @@
-"""XGBoost with balanced class weights.
+"""XGBoost with balanced class weights and explicit feature crosses.
 
 Balanced accuracy weights each class equally, but 86% of the training rows are
 `at-risk`. Inverse-frequency sample weights align the training objective with
 the metric.
+
+`stress_level`, `physical_activity_level` and `sleep_duration` carry 91% of the
+model's feature importance and the labels behave like threshold rules over them
+(`stress_level=medium` is 99.4% `at-risk`; low stress + good sleep + `active` is
+99.3% `fit`). Crossing them exposes those conjunctions as single splits.
 """
 
 import pandas as pd
@@ -36,9 +41,29 @@ def build_model() -> XGBClassifier:
     )
 
 
+SLEEP_BINS = [0, 5, 6, 7, 8, 9, 24]
+
+
+def add_crosses(x: pd.DataFrame) -> pd.DataFrame:
+    """Conjunctions of the three dominant features, as `category` columns.
+
+    Trees split one feature at a time, so a rule like "low stress AND active"
+    costs two levels of depth; as a crossed column it is a single split.
+    """
+    x = x.copy()
+    sleep_bin = pd.cut(x["sleep_duration"], bins=SLEEP_BINS).astype(str)
+    stress = x["stress_level"].astype(str)
+    activity = x["physical_activity_level"].astype(str)
+
+    x["stress_x_activity"] = (stress + "|" + activity).astype("category")
+    x["stress_x_sleep"] = (stress + "|" + sleep_bin).astype("category")
+    x["activity_x_sleep"] = (activity + "|" + sleep_bin).astype("category")
+    return x
+
+
 def main() -> None:
     data = load_train()
-    x, y = as_categorical(data["x"]), data["y"]
+    x, y = add_crosses(as_categorical(data["x"])), data["y"]
 
     print(f"{len(x):,} rows, {x.shape[1]} features, {len(CLASSES)} classes")
 
