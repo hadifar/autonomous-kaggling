@@ -28,7 +28,7 @@ def build_model() -> XGBClassifier:
         reg_alpha=0.0020126791514167887,
         gamma=0.0036943104482137935,
         max_bin=1024,
-        n_estimators=800,
+        n_estimators=153,
         enable_categorical=True,
         tree_method="hist",
         random_state=settings.seed,
