@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "permissions": {
+    "allow": [
+      "Edit(//src/train.py)",
+      "Edit(//results.csv)",
+      "Edit(//outputs/**)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git rev-parse *)",
+      "Bash(git branch *)",
+      "Bash(git revert --no-edit *)",
+      "Bash(git show *)",
+      "Bash(git tag *)",
+      "Bash(uv run python src/train.py)",
+      "Bash(uv run python src/train.py *)",
+      "Bash(uv sync)",
+      "Bash(uv sync *)",
+      "Bash(grep *)",
+      "Bash(tail *)",
+      "Bash(head *)",
+      "Bash(mkdir -p outputs/*)"
+    ],
+    "ask": [
+      "Bash(kaggle *)",
+      "Bash(git push *)"
+    ],
+    "deny": [
+      "Edit(//src/data.py)",
+      "Edit(//src/config.py)",
+      "Edit(//README.md)",
+      "Bash(git reset --hard *)",
+      "Bash(git rebase *)",
+      "Bash(git commit --amend *)"
+    ]
+  }
+}
