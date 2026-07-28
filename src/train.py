@@ -5,6 +5,7 @@ Balanced accuracy weights each class equally, but 86% of the training rows are
 the metric.
 """
 
+import numpy as np
 import pandas as pd
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import StratifiedKFold
@@ -52,7 +53,9 @@ def add_features(x: pd.DataFrame) -> pd.DataFrame:
     x["calories_per_exercise"] = x["calorie_expenditure"] / x["exercise_duration"]
     x["activity_index"] = x["step_count"] * x["exercise_duration"]
     x["sleep_x_exercise"] = x["sleep_duration"] * x["exercise_duration"]
-    return x
+    # Zero denominators (step_count, exercise_duration) divide to inf; XGBoost
+    # rejects inf but treats NaN as missing.
+    return x.replace([np.inf, -np.inf], np.nan)
 
 
 def main() -> None:
