@@ -1,11 +1,10 @@
-"""XGBoost with masked-copy augmentation of fully-observed rows.
+"""XGBoost with balanced class weights.
 
 Balanced accuracy weights each class equally, but 86% of the training rows are
 `at-risk`. Inverse-frequency sample weights align the training objective with
 the metric.
 """
 
-import numpy as np
 import pandas as pd
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import StratifiedKFold
@@ -37,43 +36,11 @@ def build_model() -> XGBClassifier:
     )
 
 
-DECISIVE = ["sleep_duration", "stress_level", "physical_activity_level"]
-"""The three columns the label rule reads. Masking these is what generates the
-hard cases the model has to hedge on."""
-
-DECISIVE_MULTIPLIER = 3.0
-AUGMENT_COPIES = 2
-
-def augment(
-    x: pd.DataFrame, y: pd.Series, rates: dict[str, float], seed: int
-) -> tuple[pd.DataFrame, pd.Series]:
-    """Append masked copies of the fully-observed rows.
-
-    Each copy keeps its label but has fields blanked at the column's natural
-    missingness rate, with the decisive columns masked `DECISIVE_MULTIPLIER`x
-    more often. The intent is extra supervision on rows that look undecidable
-    but whose true label is known.
-    """
-    rng = np.random.default_rng(seed)
-    full = np.where(x.notna().all(axis=1).values)[0]
-    idx = np.concatenate([full] * AUGMENT_COPIES)
-
-    extra = x.iloc[idx].copy()
-    for column in extra.columns:
-        rate = rates[column] * (DECISIVE_MULTIPLIER if column in DECISIVE else 1.0)
-        masked = rng.random(len(extra)) < min(rate, 0.95)
-        if masked.any():
-            extra[column] = extra[column].where(~masked)
-
-    return pd.concat([x, extra], axis=0), pd.concat([y, y.iloc[idx]], axis=0)
-
-
 def main() -> None:
     data = load_train()
     x, y = as_categorical(data["x"]), data["y"]
 
     print(f"{len(x):,} rows, {x.shape[1]} features, {len(CLASSES)} classes")
-    rates = {c: float(x[c].isna().mean()) for c in x.columns}
 
     oof = pd.Series(index=x.index, dtype=float)
     folds = StratifiedKFold(
@@ -81,12 +48,9 @@ def main() -> None:
     )
 
     for fold, (train_idx, val_idx) in enumerate(folds.split(x, y), start=1):
-        # Augment the training folds only -- masked copies of validation rows
-        # would leak their labels into the OOF score.
-        xtr, ytr = augment(x.iloc[train_idx], y.iloc[train_idx], rates, settings.seed + fold)
-
         model = build_model()
-        model.fit(xtr, ytr, sample_weight=compute_sample_weight("balanced", ytr))
+        weights = compute_sample_weight("balanced", y.iloc[train_idx])
+        model.fit(x.iloc[train_idx], y.iloc[train_idx], sample_weight=weights)
         predictions = model.predict(x.iloc[val_idx])
         oof.iloc[val_idx] = predictions
 
