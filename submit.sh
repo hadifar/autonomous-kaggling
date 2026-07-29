@@ -2,6 +2,7 @@
 # Upload a built submission to Kaggle.
 #
 #   ./submit.sh <tag> [message]
+#   ./submit.sh --status          # past submissions and their public scores
 #
 # Uploads outputs/submissions/<tag>/submission.csv. Without an explicit message
 # it reuses the one recorded when `src/submission.py` built the submission.
@@ -12,8 +13,22 @@ set -euo pipefail
 
 COMPETITION="playground-series-s6e7"
 
+# The CLI usually lives in the project venv rather than on PATH.
+if command -v kaggle >/dev/null 2>&1; then
+    kg() { kaggle "$@"; }
+else
+    kg() { (cd "$(dirname "$0")" && uv run kaggle "$@"); }
+fi
+
+if [ "${1:-}" = "--status" ]; then
+    # Read back scores; costs nothing against the daily quota.
+    kg competitions submissions -c "$COMPETITION"
+    exit 0
+fi
+
 if [ $# -lt 1 ]; then
     echo "usage: $0 <tag> [message]" >&2
+    echo "       $0 --status        # show past submissions and their scores" >&2
     echo >&2
     echo "available tags:" >&2
     ls -1 "$(dirname "$0")/outputs/submissions" 2>/dev/null | sed 's/^/  /' >&2 \
@@ -43,4 +58,7 @@ fi
 
 echo "submitting ${csv}"
 echo "message: ${message}"
-kaggle competitions submit -c "$COMPETITION" -f "$csv" -m "$message"
+kg competitions submit -c "$COMPETITION" -f "$csv" -m "$message"
+
+echo
+echo "scoring takes a moment; check with: $0 --status"
