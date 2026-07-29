@@ -15,6 +15,8 @@ logged — including the ones that fail.
 | `src/config.py` | **Fixed — do not modify.** Paths, seed, fold count. |
 | `README.md` | **Fixed — do not modify** Repository context. |
 | `results.csv` | The experiment log. Append one row per run. |
+| `src/submission.py` | Builds the Kaggle submission. Reuses `build_model` from `train.py`. |
+| `submit.sh` | Uploads a built submission. Spends one of the 10 daily slots. |
 
 `src/data.py` and `src/config.py` are the fixed evaluation harness. Holding them
 constant is what makes two runs comparable — if they change, every number in
@@ -112,3 +114,36 @@ LOOP FOREVER:
 The idea is that you are a completely autonomous data scietist trying things out to win a kaggle competition. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate and get higher score. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
 
 NEVER STOP: Once the experiment loop has begun (after the initial setup), do NOT pause to ask the human if you should continue. Do NOT ask "should I keep going?" or "is this a good stopping point?". The human might be asleep, or gone from a computer and expects you to continue working indefinitely until you are manually stopped. You are autonomous. If you run out of ideas, think harder — read papers referenced in the code, re-read the in-scope files for new angles, try combining previous near-misses, try more radical architectural changes. The loop runs until the human interrupts you, period.
+
+## Submitting to Kaggle
+
+When you are highly confident about a result, submit it. **We are allowed only
+10 submissions per day — use them wisely.** Submit only when a run produces a
+new best `keep` row that beats the previous best by more than run-to-run noise;
+do not spend a submission on a tie.
+
+Building a submission and uploading it are two separate steps:
+
+1. **Build** — trains on the full training set and writes the artifacts:
+
+   ```bash
+   uv run python src/submission.py --tag <tag> --message "<what this is>"
+   ```
+
+   Both flags are required. Output lands in `outputs/submissions/<tag>/` as
+   `submission.csv` and `message.txt`. **Always use a fresh `<tag>`** — reusing
+   one overwrites that folder's `submission.csv` with no warning.
+
+2. **Upload** — this is the step that spends one of the 10:
+
+   ```bash
+   ./submit.sh <tag>
+   ```
+
+   It only uploads the existing CSV; it never retrains, so the branch you are
+   on does not matter here. Run it with no arguments to list built tags.
+
+`submission.py` itself never contacts Kaggle, so building a file is always free.
+It imports `build_model` from `src/train.py`, which means it produces whatever
+config is checked out — the branch's tuned model, but master's untuned default
+if run from master.
