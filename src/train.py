@@ -1,11 +1,10 @@
-"""XGBoost with latent rule-condition probabilities as extra features.
+"""XGBoost with balanced class weights.
 
 Balanced accuracy weights each class equally, but 86% of the training rows are
 `at-risk`. Inverse-frequency sample weights align the training objective with
 the metric.
 """
 
-import numpy as np
 import pandas as pd
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import StratifiedKFold
@@ -37,39 +36,6 @@ def build_model() -> XGBClassifier:
     )
 
 
-LATENT = {
-    "s7": ("sleep_duration", lambda c: c >= 7),
-    "s6": ("sleep_duration", lambda c: c < 6),
-    "lo": ("stress_level", lambda c: c.astype(object) == "low"),
-    "hi": ("stress_level", lambda c: c.astype(object) == "high"),
-    "ac": ("physical_activity_level", lambda c: c.astype(object) == "active"),
-}
-"""The binary conditions the label rule is built from. Each is learnable from the
-other columns on the rows where it is observed, which is far more supervision per
-target than the 3-class label gives."""
-
-
-def add_latent(x_fit: pd.DataFrame, y_unused, x_out: pd.DataFrame) -> pd.DataFrame:
-    """Append P(condition) for each rule condition, fit on `x_fit`, applied to
-    `x_out`. Where the underlying column is observed in `x_out`, the truth is
-    used instead of the prediction."""
-    others = [c for c in x_fit.columns if c not in
-              ("sleep_duration", "stress_level", "physical_activity_level")]
-    out = x_out.copy()
-    for key, (col, cond) in LATENT.items():
-        observed = x_fit[col].notna()
-        model = XGBClassifier(
-            max_depth=6, learning_rate=0.1, n_estimators=120, subsample=0.8,
-            colsample_bytree=0.8, max_bin=256, enable_categorical=True,
-            tree_method="hist", n_jobs=-1, random_state=settings.seed,
-        )
-        model.fit(x_fit.loc[observed, others], cond(x_fit[col][observed]).astype(int))
-        p = model.predict_proba(x_out[others])[:, 1]
-        seen = x_out[col].notna().values
-        out["z_" + key] = np.where(seen, cond(x_out[col]).astype(float).values, p)
-    return out
-
-
 def main() -> None:
     data = load_train()
     x, y = as_categorical(data["x"]), data["y"]
@@ -82,12 +48,10 @@ def main() -> None:
     )
 
     for fold, (train_idx, val_idx) in enumerate(folds.split(x, y), start=1):
-        xtr, ytr = x.iloc[train_idx], y.iloc[train_idx]
-
         model = build_model()
-        weights = compute_sample_weight("balanced", ytr)
-        model.fit(add_latent(xtr, ytr, xtr), ytr, sample_weight=weights)
-        predictions = model.predict(add_latent(xtr, ytr, x.iloc[val_idx]))
+        weights = compute_sample_weight("balanced", y.iloc[train_idx])
+        model.fit(x.iloc[train_idx], y.iloc[train_idx], sample_weight=weights)
+        predictions = model.predict(x.iloc[val_idx])
         oof.iloc[val_idx] = predictions
 
         fold_score = balanced_accuracy_score(y.iloc[val_idx], predictions)
