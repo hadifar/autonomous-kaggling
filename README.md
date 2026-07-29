@@ -1,9 +1,10 @@
-# Student Health Risk
-Predict a student's `health_condition` from their lifestyle and biometric measurements. This is a three-class classification problem. The goal is to obtain highest balanced accuracy possible.
+# Autonomous Kaggling
+
+Applying autoresearch to a student health-condition prediction task: classify each record as `unhealthy`, `at-risk`, or `fit` from a mix of numeric and categorical features. The objective is the highest balanced accuracy possible.
 
 ## Evaluation
 
-Submissions are scored on **balanced accuracy** between the predicted class and the observed target — the mean of the per-class recalls, so each of the three classes contributes equally regardless of how often it appears in the data.
+Submissions are scored on **balanced accuracy**: the mean of the per-class recalls, so each of the three classes contributes equally regardless of how often it appears in the data.
 
 This matters because the classes are heavily imbalanced in the training set:
 
@@ -17,7 +18,7 @@ Because each class is weighted equally, predicting the majority class everywhere
 
 ## Submission File
 
-For each `id` in the test set, predict one label for `health_condition`: `at-risk`, `unhealthy`, or `fit`. The file must contain a header and follow this format:
+For each `id` in the test set, predict one label for `health_condition`: `at-risk`, `unhealthy`, or `fit`. The file must include a header and follow this format:
 
 ```csv
 id,health_condition
