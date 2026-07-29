@@ -43,8 +43,11 @@ def main() -> None:
     print(f"{len(x):,} rows, {x.shape[1]} features, {len(CLASSES)} classes")
 
     oof = pd.Series(index=x.index, dtype=float)
+    # Training-set size has a measurable monotone effect on this task, and
+    # n_splits controls it: 5 folds train on 80% of the data, 10 on 90%.
+    n_splits = 10
     folds = StratifiedKFold(
-        n_splits=settings.n_splits, shuffle=True, random_state=settings.seed
+        n_splits=n_splits, shuffle=True, random_state=settings.seed
     )
 
     for fold, (train_idx, val_idx) in enumerate(folds.split(x, y), start=1):
